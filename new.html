@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="keywords" content="device info, keyboard health, battery status, network info">
+    <meta name="description" content="A simple device info page with keyboard health, battery status, and network information.">
+    <meta name="author" content="Your Name">
+    <link rel="shortcut icon" href="https://example.com/path/to/your/logo.png" type="image/png">
+    <title>Device Info - Mobile Style</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eaeaea;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0 20px;
+        }
+        .container {
+            text-align: center;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        img.logo {
+            width: 80%;
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .device-info {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+            text-align: left;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        h3 {
+            margin-top: 20px;
+            font-size: 20px;
+            color: #007BFF;
+        }
+        p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img class="logo" src="https://example.com/path/to/your/logo.png" alt="Logo">
+        <h1>Device Info</h1>
+        <button onclick="checkDevice()">Tekan untuk Mengecek Informasi Device</button>
+        <div class="device-info" id="deviceInfo"></div>
+        <div id="timeSpent" class="device-info"></div>
+    </div>
+    <script>
+        let keyStrokeCount = 0;
+        let startTime = 0;
+        let typingSpeed = 0;
+
+        const countKeyStrokes = (event) => {
+            keyStrokeCount++;
+            if (keyStrokeCount === 1) {
+                startTime = Date.now();
+            }
+            typingSpeed = (keyStrokeCount / ((Date.now() - startTime) / 1000)) * 60;
+        };
+
+        document.addEventListener('keypress', countKeyStrokes);
+
+        let pageLoadStartTime = performance.now();
+
+        function checkDevice() {
+            const deviceInfoElement = document.getElementById('deviceInfo');
+            const platform = navigator.platform;
+            const userAgent = navigator.userAgent;
+            const appVersion = navigator.appVersion;
+            const cpuCores = navigator.hardwareConcurrency || 'N/A';
+            const deviceMemory = navigator.deviceMemory || 'N/A';
+
+            // Mendeteksi Baterai
+            navigator.getBattery().then(function(battery) {
+                function updateBatteryInfo() {
+                    const batteryLevel = (battery.level * 100) + '%';
+                    const chargingStatus = battery.charging ? 'Charging' : 'Not Charging';
+                    deviceInfoElement.innerHTML = `
+                        <p><strong>Platform:</strong> ${platform}</p>
+                        <p><strong>User Agent:</strong> ${userAgent}</p>
+                        <p><strong>App Version:</strong> ${appVersion}</p>
+                        <p><strong>CPU Cores:</strong> ${cpuCores} cores</p>
+                        <p><strong>Device Memory (RAM):</strong> ${deviceMemory} GB</p>
+                        <h3>Battery Info:</h3>
+                        <p><strong>Battery Level:</strong> ${batteryLevel}</p>
+                        <p><strong>Battery Status:</strong> ${chargingStatus}</p>
+                        <h3>Keyboard Health:</h3>
+                        <p><strong>Jumlah Ketukan:</strong> ${keyStrokeCount}</p>
+                        <p><strong>Kecepatan Mengetik:</strong> ${typingSpeed.toFixed(2)} ketukan per menit</p>
+                    `;
+                }
+                updateBatteryInfo();
+                battery.addEventListener('levelchange', updateBatteryInfo);
+                battery.addEventListener('chargingchange', updateBatteryInfo);
+
+                // Mendeteksi IP dan Lokasi
+                fetch('https://ipapi.co/json/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const ip = data.ip;
+                        const country = data.country_name;
+                        const city = data.city;
+                        const isp = data.org;
+
+                        // Mendeteksi Penyimpanan
+                        if ('storage' in navigator && 'estimate' in navigator.storage) {
+                            navigator.storage.estimate().then(estimate => {
+                                const totalStorage = estimate.quota / (1024 * 1024 * 1024); // in GB
+                                const usedStorage = estimate.usage / (1024 * 1024 * 1024); // in GB
+                                const availableStorage = totalStorage - usedStorage;
+                                deviceInfoElement.innerHTML += `
+                                    <h3>Network Info:</h3>
+                                    <p><strong>IP Address:</strong> ${ip}</p>
+                                    <p><strong>ISP:</strong> ${isp}</p>
+                                    <p><strong>Country:</strong> ${country}</p>
+                                    <p><strong>City:</strong> ${city}</p>
+                                    <h3>Storage Info:</h3>
+                                    <p><strong>Total Storage Quota:</strong> ${totalStorage.toFixed(2)} GB</p>
+                                    <p><strong>Used Storage:</strong> ${usedStorage.toFixed(2)} GB</p>
+                                    <p><strong>Available Storage:</strong> ${availableStorage.toFixed(2)} GB</p>
+                                `;
+                            });
+                        } else {
+                            deviceInfoElement.innerHTML += '<p>Storage information is not available.</p>';
+                        }
+                    })
+                    .catch(error => {
+                        deviceInfoElement.innerHTML = `<p>Failed to retrieve IP and location data.</p>`;
+                    });
+            });
+
+            // Pendeteksi Kecepatan Sinyal
+            if ('connection' in navigator) {
+                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                const updateConnectionInfo = () => {
+                    const effectiveType = connection.effectiveType || 'N/A';
+                    const downlink = (connection.downlink || 'N/A') + ' Mbps';
+                    deviceInfoElement.innerHTML += `
+                        <h3>Network Speed Info:</h3>
+                        <p><strong>Effective Network Type:</strong> ${effectiveType}</p>
+                        <p><strong>Downlink Speed:</strong> ${downlink}</p>
+                    `;
+                };
+                updateConnectionInfo();
+                connection.addEventListener('change', updateConnectionInfo);
+            } else {
+                deviceInfoElement.innerHTML += '<h3>Network Speed Info:</h3><p>Network Information is not available.</p>';
+            }
+        }
+
+        // Menghitung waktu yang dihabiskan di halaman
+        window.addEventListener('beforeunload', () => {
+            const pageLoadEndTime = performance.now();
+            const timeSpent = ((pageLoadEndTime - pageLoadStartTime) / 1000).toFixed(2); // Waktu dalam detik
+            document.getElementById('timeSpent').innerHTML = `<h3>Waktu di Halaman:</h3><p>${timeSpent} detik</p>`;
+        });
+    </script>
+</body>
+</html>
